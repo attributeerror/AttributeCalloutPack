@@ -56,14 +56,11 @@ jobs:
         
   build:
       needs: determine-release-version
-      if: |
-        needs.determine-release-version.outputs.new-release-published == 'true'
-      runs-on: windows-latest
+      runs-on: windows-2019
       permissions:
         contents: write
       steps:          
           - name: .NET Build
-            if: needs.determine-release-version.outputs.new-release-published == 'true'
             run: dotnet build AttributeCalloutPack.sln -c Release -f net452
 
           - name: Create Production Release
