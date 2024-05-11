@@ -45,12 +45,70 @@ jobs:
         with:
           node-version: '20.13.1'
       
-      - name: Install Node Dependencies
-        run: npm install --no-save --no-audit --no-fund --force semantic-release @actions/core
-      
-      - name: Determine Version Number
+      - name: Run Semantic Release
+        uses: docker://ghcr.io/codfish/semantic-release-action@sha256:71048986f7e28f024cbad0ef106a7ef20b9b0d322f3a8aa51d89f1c424e75061 # codfish/semantic-release-action@v3.3.0
         id: semantic
-        run: node ./.github/workflows/scripts/semantic-release.mjs
+        with:
+          branches: |
+            [
+              'main',
+              {
+                name: 'alpha',
+                prerelease: true
+              },
+              {
+                name: 'beta',
+                prerelease: true
+              }
+            ]
+          tag_format: 'v${version}'
+          plugins: |-
+            [
+              [
+                '@semantic-release/commit-analyzer',
+                {
+                  'releaseRules': [
+                    { 'breaking': true, 'release': 'major' },
+                    { 'revert': true, 'release': 'patch' },
+                    { 'type': 'feat', 'release': 'minor' },
+                    { 'type': 'fix', 'release': 'patch' },
+                    { 'type': 'chore', 'release': 'patch' },
+                    { 'type': 'perf', 'release': 'patch' },
+                    { 'type': 'refactor', 'release': 'patch' },
+                    { 'type': 'revert', 'release': 'patch' },
+                    { 'type': 'test', 'release': 'patch' },
+                    { 'type': 'npm', 'release': 'patch' },
+                    { 'type': 'build', 'scope': 'deps', 'release': 'patch' },
+                    { 'scope': 'no-release', 'release': false }
+                  ],
+                  'parserOpts': {
+                    'noteKeywords': ['BREAKING CHANGE', 'BREAKING CHANGES']
+                  }
+                }
+              ],
+              [
+                '@semantic-release/release-notes-generator',
+                {
+                  'presetConfig': {
+                    'types': [
+                      { 'type': 'feat', 'section': '✨ Features' },
+                      { 'type': 'fix', 'section': '🐛 Bug Fixes' },
+                      { 'type': 'chore', 'section': '🙂 Chores' },
+                      { 'type': 'perf', 'section': '🚄 Performance Improvements' },
+                      { 'type': 'refactor', 'hidden': true },
+                      { 'type': 'npm', 'section': '🤖 Dependency Updates' },
+                      { 'type': 'build', 'section': '🤖 Dependency Updates' }
+                    ]
+                  },
+                  'parserOpts': {
+                    'noteKeywords': ['BREAKING CHANGE', 'BREAKING CHANGES']
+                  },
+                  'writerOpts': {
+                    'commitsSort': ['subject', 'scope']
+                  }
+                }
+              ]
+            ]
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         
@@ -74,6 +132,12 @@ jobs:
 
           - name: Build solution
             run: msbuild AttributeCalloutPack.sln -t:rebuild -property:Configuration=Release
+
+          - name: Create asset attestation
+            if: success() && github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'beta') && needs.determine-release-version.outputs.new-release-published == 'true'
+            uses: actions/attest-build-provenance@951c0c5f8e375ad4efad33405ab77f7ded2358e4 # actions/attest-build-provenance@v1.1.1
+            with:
+              subject-path: 'AttributeCalloutPack/bin/Release/AttributeCalloutPack.net.dll'
 
           - name: Create Production Release
             if: success() && github.event_name == 'push' && github.ref_name == 'main' && needs.determine-release-version.outputs.new-release-published == 'true'
