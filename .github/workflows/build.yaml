@@ -62,9 +62,18 @@ jobs:
       steps:
           - name: Checkout Repository
             uses: actions/checkout@44c2b7a8a4ea60a981eaca3cf939b5f4305c123b # actions/checkout@v4
-            
-          - name: .NET Build
-            run: dotnet build AttributeCalloutPack.sln -c Release -f net452
+
+          - name: Setup MSBuild
+            uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # microsoft/setup-msbuild@v2
+
+          - name: Setup NuGet
+            uses: nuget/setup-nuget@a21f25cd3998bf370fde17e3f1b4c12c175172f9 # nuget/setup-nuget@v2
+
+          - name: Restore Packages
+            run: nuget restore AttributeCalloutPack.sln
+
+          - name: Build solution
+            run: msbuild AttributeCalloutPack.sln -t:rebuild -property:Configuration=Release
 
           - name: Create Production Release
             if: success() && github.event_name == 'push' && github.ref_name == 'main' && needs.determine-release-version.outputs.new-release-published == 'true'
@@ -89,6 +98,6 @@ jobs:
               files: 'AttributeCalloutPack/bin/Release/AttributeCalloutPack.net.dll'
 
           - name: Delete tag is build unsuccessful
-            if: failure()
+            if: failure() && needs.determine-release-version.outputs.new-release-published == 'true'
             shell: bash
             run: git push origin refs/tags/v${{ needs.determine-release-version.outputs.release-version }} --delete
