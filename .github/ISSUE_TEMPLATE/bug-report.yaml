@@ -1,0 +1,48 @@
+name: Submit a bug report
+description: Submit a bug report if you've found a bug in AttributeCalloutPack.
+labels:
+  - bug
+title: "[Bug]: <title>"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for your interest in contributing to AttributeCalloutPack!
+        
+        * For questions, ask in [Discussions](https://github.com/attributeerror/AttributeCalloutPack/discussions).
+        * Before you file an issue, read the [Contributing guide](https://github.com/attributeerror/AttributeCalloutPack/blob/main/docs/CONTRIBUTING.md).
+        * Check to make sure someone hasn't already opened a similiar [issue](https://github.com/attributeerror/AttributeCalloutPack/issues).
+        
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of Conduct
+      description: This project has a Code of Conduct that all participants are expected to understand and follow.
+      options:
+        - label: I have read and agree to the Daisuke project's [Code of Conduct](https://github.com/attributeerror/AttributeCalloutPack/blob/main/docs/CODE_OF_CONDUCT.md)
+          required: true
+      
+  - type: textarea
+    attributes:
+      label: What is the bug?
+      description: |
+        - Please provide a clear and concise description of what the bug is.
+        - Some useful information could be: who this bug affects, how often does this bug occurs, and what you'd expect the behaviour to be.
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Please provide steps to reproduce the bug.
+      description: |
+        - Give as much detail as you can to help me understand the bug.
+        - The more detail you give, the less questions I'll have to ask before I get on with fixing it!
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Additional information
+      description: Add any other context or screenshots about the bug here.
+    validations:
+      required: false

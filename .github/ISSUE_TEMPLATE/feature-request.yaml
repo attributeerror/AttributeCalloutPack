@@ -1,0 +1,37 @@
+name: Feature Request
+description: Request a new feature to be added to Daisuke.
+labels:
+  - enhancement
+title: "[Enhancement]: <title>"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for your interest in contributing to Daisuke!
+        
+        * For questions, ask in [Discussions](https://github.com/attributeerror/AttributeCalloutPack/discussions).
+        * Before you file an issue, read the [Contributing guide](https://github.com/attributeerror/AttributeCalloutPack/blob/main/docs/CONTRIBUTING.md).
+        * Check to make sure someone hasn't already opened a similiar [issue](https://github.com/attributeerror/AttributeCalloutPack/issues).
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of Conduct
+      description: This project has a Code of Conduct that all participants are expected to understand and follow.
+      options:
+        - label: I have read and agree to the Daisuke project's [Code of Conduct](https://github.com/attributeerror/AttributeCalloutPack/blob/main/docs/CODE_OF_CONDUCT.md)
+          required: true
+      
+  - type: textarea
+    attributes:
+      label: What is the feature you'd like to see?
+      description: Please describe in as much detail the feature you'd like to see added to Daisuke.
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Additional information
+      description: Add any other context or screenshots about the bug here.
+    validations:
+      required: false
