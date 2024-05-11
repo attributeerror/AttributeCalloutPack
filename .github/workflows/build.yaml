@@ -15,68 +15,153 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  determine-release-version:
+    if: |
+      github.event_name == 'push' &&
+      github.triggering_actor != 'dependabot[bot]'         &&
+      (startsWith(github.event.head_commit.message, 'feat')  ||
+      startsWith(github.event.head_commit.message, 'fix')  ||
+      startsWith(github.event.head_commit.message, 'chore') ||
+      startsWith(github.event.head_commit.message, 'build') ||
+      startsWith(github.event.head_commit.message, 'ci') ||
+      startsWith(github.event.head_commit.message, 'perf') ||
+      startsWith(github.event.head_commit.message, 'refactor') ||
+      startsWith(github.event.head_commit.message, 'revert') ||
+      startsWith(github.event.head_commit.message, 'style') ||
+      startsWith(github.event.head_commit.message, 'test') ||
+      startsWith(github.event.head_commit.message, 'Merge')
+      ) && !contains(github.event.head_commit.message, '[skip ci]')
+    runs-on: ubuntu-latest
+    outputs:
+      new-release-published: ${{ steps.semantic.outputs.new-release-published }}
+      release-version: ${{ steps.semantic.outputs.release-version }}
+      release-notes: ${{ steps.semantic.outputs.release-notes }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@44c2b7a8a4ea60a981eaca3cf939b5f4305c123b # actions/checkout@v4
+
+      - name: Setup NodeJS
+        uses: actions/setup-node@c2ac33f2c62f978d6c944d9648125a294e56dc0b # actions/setup-node@v4.0.2
+        with:
+          node-version: '20.13.1'
+      
+      - name: Run Semantic Release
+        uses: docker://ghcr.io/codfish/semantic-release-action@sha256:71048986f7e28f024cbad0ef106a7ef20b9b0d322f3a8aa51d89f1c424e75061 # codfish/semantic-release-action@v3.3.0
+        id: semantic
+        with:
+          branches: |
+            [
+              'main',
+              {
+                name: 'alpha',
+                prerelease: true
+              },
+              {
+                name: 'beta',
+                prerelease: true
+              }
+            ]
+          tag_format: 'v${version}'
+          plugins: |-
+            [
+              [
+                '@semantic-release/commit-analyzer',
+                {
+                  'releaseRules': [
+                    { 'breaking': true, 'release': 'major' },
+                    { 'revert': true, 'release': 'patch' },
+                    { 'type': 'feat', 'release': 'minor' },
+                    { 'type': 'fix', 'release': 'patch' },
+                    { 'type': 'chore', 'release': 'patch' },
+                    { 'type': 'perf', 'release': 'patch' },
+                    { 'type': 'refactor', 'release': 'patch' },
+                    { 'type': 'revert', 'release': 'patch' },
+                    { 'type': 'test', 'release': 'patch' },
+                    { 'type': 'npm', 'release': 'patch' },
+                    { 'type': 'build', 'scope': 'deps', 'release': 'patch' },
+                    { 'scope': 'no-release', 'release': false }
+                  ],
+                  'parserOpts': {
+                    'noteKeywords': ['BREAKING CHANGE', 'BREAKING CHANGES']
+                  }
+                }
+              ],
+              [
+                '@semantic-release/release-notes-generator',
+                {
+                  'presetConfig': {
+                    'types': [
+                      { 'type': 'feat', 'section': '✨ Features' },
+                      { 'type': 'fix', 'section': '🐛 Bug Fixes' },
+                      { 'type': 'chore', 'section': '🙂 Chores' },
+                      { 'type': 'perf', 'section': '🚄 Performance Improvements' },
+                      { 'type': 'refactor', 'hidden': true },
+                      { 'type': 'npm', 'section': '🤖 Dependency Updates' },
+                      { 'type': 'build', 'section': '🤖 Dependency Updates' }
+                    ]
+                  },
+                  'parserOpts': {
+                    'noteKeywords': ['BREAKING CHANGE', 'BREAKING CHANGES']
+                  },
+                  'writerOpts': {
+                    'commitsSort': ['subject', 'scope']
+                  }
+                }
+              ]
+            ]
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
   build:
-      if: |
-          github.event_name == 'push' &&
-          github.triggering_actor != 'dependabot[bot]'         &&
-          (startsWith(github.event.head_commit.message, 'feat')  ||
-          startsWith(github.event.head_commit.message, 'fix')  ||
-          startsWith(github.event.head_commit.message, 'chore') ||
-          startsWith(github.event.head_commit.message, 'build') ||
-          startsWith(github.event.head_commit.message, 'ci') ||
-          startsWith(github.event.head_commit.message, 'perf') ||
-          startsWith(github.event.head_commit.message, 'refactor') ||
-          startsWith(github.event.head_commit.message, 'revert') ||
-          startsWith(github.event.head_commit.message, 'style') ||
-          startsWith(github.event.head_commit.message, 'test') ||
-          startsWith(github.event.head_commit.message, 'Merge')
-          ) && !contains(github.event.head_commit.message, '[skip ci]')
-      runs-on: windows-latest
+      needs: determine-release-version
+      runs-on: windows-2019
+      permissions:
+        contents: write
       steps:
           - name: Checkout Repository
             uses: actions/checkout@44c2b7a8a4ea60a981eaca3cf939b5f4305c123b # actions/checkout@v4
 
-          - name: Setup NodeJS
-            uses: actions/setup-node@c2ac33f2c62f978d6c944d9648125a294e56dc0b # actions/setup-node@v4.0.2
+          - name: Setup MSBuild
+            uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # microsoft/setup-msbuild@v2
+
+          - name: Setup NuGet
+            uses: nuget/setup-nuget@a21f25cd3998bf370fde17e3f1b4c12c175172f9 # nuget/setup-nuget@v2
+
+          - name: Restore Packages
+            run: nuget restore AttributeCalloutPack.sln
+
+          - name: Build solution
+            run: msbuild AttributeCalloutPack.sln -t:rebuild -property:Configuration=Release
+
+          - name: Create asset attestation
+            if: success() && github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'beta') && needs.determine-release-version.outputs.new-release-published == 'true'
+            uses: actions/attest-build-provenance@951c0c5f8e375ad4efad33405ab77f7ded2358e4 # actions/attest-build-provenance@v1.1.1
             with:
-              node-version: '20.13.1'
-          
-          - name: Install Node Dependencies
-            run: npm install --no-save --no-audit --no-fund --force semantic-release @actions/core
-          
-          - name: Determine Version Number
-            id: semantic
-            run: node ./scripts/semantic-release.mjs
-            env:
-              GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
-          - name: .NET Build
-            if: steps.semantic.outputs.new-release-published == 'true'
-            run: dotnet build AttributeCalloutPack.sln -c Release -f net452
+              subject-path: 'AttributeCalloutPack/bin/Release/AttributeCalloutPack.net.dll'
 
           - name: Create Production Release
-            if: success() && github.event_name == 'push' && github.ref_name == 'main' && steps.semantic.outputs.new-release-published == 'true'
+            if: success() && github.event_name == 'push' && github.ref_name == 'main' && needs.determine-release-version.outputs.new-release-published == 'true'
             uses: softprops/action-gh-release@69320dbe05506a9a39fc8ae11030b214ec2d1f87 # v2.0.4
             with:
-              tag_name: v${{ steps.semantic.outputs.release-version }}
-              body: ${{ steps.semantic.outputs.release-notes }}
+              tag_name: v${{ needs.determine-release-version.outputs.release-version }}
+              body: ${{ needs.determine-release-version.outputs.release-notes }}
               draft: false
               prerelease: false
               make_latest: true
               files: 'AttributeCalloutPack/bin/Release/AttributeCalloutPack.net.dll'
 
           - name: Create Beta Release
-            if: success() && github.event_name == 'push' && github.ref_name == 'beta' && steps.semantic.outputs.new-release-published == 'true'
+            if: success() && github.event_name == 'push' && github.ref_name == 'beta' && needs.determine-release-version.outputs.new-release-published == 'true'
             uses: softprops/action-gh-release@69320dbe05506a9a39fc8ae11030b214ec2d1f87 # v2.0.4
             with:
-              tag_name: v${{ steps.semantic.outputs.release-version }}
-              body: ${{ steps.semantic.outputs.release-notes }}
+              tag_name: v${{ needs.determine-release-version.outputs.release-version }}
+              body: ${{ needs.determine-release-version.outputs.release-notes }}
               draft: false
               prerelease: true
               make_latest: false
               files: 'AttributeCalloutPack/bin/Release/AttributeCalloutPack.net.dll'
 
           - name: Delete tag is build unsuccessful
-            if: failure()
+            if: failure() && needs.determine-release-version.outputs.new-release-published == 'true'
             shell: bash
-            run: git push origin refs/tags/v${{ steps.semantic.outputs.release-version }} --delete
+            run: git push origin refs/tags/v${{ needs.determine-release-version.outputs.release-version }} --delete
