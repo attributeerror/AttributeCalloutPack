@@ -19,10 +19,10 @@ I accept any form of contributions you want to make to the repository! Although 
 
 ### Issues
 #### Create a new issue
-If you spot a problem with AttributeCalloutPack, [search if an issue already exists](https://docs.github.com/en/github/searching-for-information-on-github/searching-on-github/searching-issues-and-pull-requests#search-by-the-title-body-or-comments). If a related issue doesn't exist, you can open a new issue using a relevant [issue form](https://github.com/attributeerror/AttributeCalloutPack/issues/new/choose).
+If you spot a problem with AttributeCalloutPack, [search if an issue already exists](https://docs.github.com/en/github/searching-for-information-on-github/searching-on-github/searching-issues-and-pull-requests#search-by-the-title-body-or-comments). If a related issue doesn't exist, you can open a new issue using a relevant [issue form](https://github.com/attributeerror/FivePD-AttributeCalloutPack/issues/new/choose).
 
 #### Solve an issue
-Scan through the [existing issues](https://github.com/attributeerror/AttributeCalloutPack/issues) to find one that interests you. You can narrow down the search using `labels` as filters. As a general rule, issues will only ever be assigned to myself. If you find an issue to work on, you are welcome to open a PR with a fix and leave a comment on the issue saying you've done so.
+Scan through the [existing issues](https://github.com/attributeerror/FivePD-AttributeCalloutPack/issues) to find one that interests you. You can narrow down the search using `labels` as filters. As a general rule, issues will only ever be assigned to myself. If you find an issue to work on, you are welcome to open a PR with a fix and leave a comment on the issue saying you've done so.
 
 ### Make Changes
 #### Make changes locally
