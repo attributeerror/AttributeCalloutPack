@@ -44,4 +44,4 @@ Please take a look at the [contributing guide](./CONTRIBUTING.md) for detailed i
 
 ### Join me in Discussions
 
-I use GitHub Discussions to talk about all sorts of topics related to my callout pack! For example, if you'd like help troubleshooting a PR or have a suggestion, join us in the [discussions](https://github.com/attributeerror/AttributeCalloutPack/discussions).
+I use GitHub Discussions to talk about all sorts of topics related to my callout pack! For example, if you'd like help troubleshooting a PR or have a suggestion, join us in the [discussions](https://github.com/attributeerror/FivePD-AttributeCalloutPack/discussions).

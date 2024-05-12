@@ -52,6 +52,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AbandonedVehicleCallout\Callout.cs" />
+    <Compile Include="BaseCallout.cs" />
     <Compile Include="Extensions\EnumExtensions.cs" />
     <Compile Include="Extensions\FiveMExtensions.cs" />
     <Compile Include="Extensions\StringExtensions.cs" />
@@ -64,6 +65,7 @@
     <Compile Include="Models\NotificationIconType.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SharedUtils.cs" />
+    <Compile Include="Models\TickerFriendlyName.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

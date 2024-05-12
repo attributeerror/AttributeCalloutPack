@@ -2,6 +2,9 @@
 using NativeApi = CitizenFX.Core.Native.API;
 using System;
 using Amethyst.FivePD.AttributeCalloutPack.Models;
+using FivePD.API;
+using System.Runtime.CompilerServices;
+using FivePD.API.Utils;
 
 namespace Amethyst.FivePD.AttributeCalloutPack
 {
@@ -43,7 +46,7 @@ namespace Amethyst.FivePD.AttributeCalloutPack
 
         internal static void ShowNetworkedNotification(
             string text,
-            string sender = "~b~Control",
+            string sender = "~y~Dispatch",
             string subject = "~m~Callout Update",
             string txDict = "CHAR_CALL911",
             string txName = "CHAR_CALL911",
@@ -62,6 +65,14 @@ namespace Amethyst.FivePD.AttributeCalloutPack
             }
             NativeApi.EndTextCommandThefeedPostMessagetext(txDict, txName, flash, (int)iconType, sender, subject);
             NativeApi.EndTextCommandThefeedPostTicker(isImportant, saveToBrief);
+        }
+
+        internal static void SendCalloutUpdateNotification(
+            string text,
+            bool isFromDispatch
+        )
+        {
+            ShowNetworkedNotification(text, isFromDispatch ? "~y~Dispatch" : $"~b~{GetPlayerCallsign()}");
         }
 
         internal static void ShowNotification(
@@ -99,6 +110,13 @@ namespace Amethyst.FivePD.AttributeCalloutPack
             NativeApi.SetTextEntry("STRING");
             NativeApi.AddTextComponentString(text);
             NativeApi.DrawText(x, y);
+        }
+
+        internal static string GetPlayerCallsign()
+        {
+            PlayerData playerData = Utilities.GetPlayerData();
+            string callsign = $"{playerData.DisplayName} {playerData.Callsign}";
+            return callsign.Length < 1 ? "You" : callsign;
         }
 
     }

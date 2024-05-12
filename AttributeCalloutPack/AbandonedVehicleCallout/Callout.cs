@@ -1,19 +1,17 @@
 ﻿using Amethyst.FivePD.AttributeCalloutPack.AbandonedVehicleCallout.Models;
+using Amethyst.FivePD.AttributeCalloutPack.Models;
 using CitizenFX.Core;
 using FivePD.API;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using FivePdApi = FivePD.API;
 using NativeApi = CitizenFX.Core.Native.API;
 
 namespace Amethyst.FivePD.AttributeCalloutPack.AbandonedVehicleCallout
 {
     [CalloutProperties("Abandoned Vehicle", "AttributeError", "1.2.0")]
-    internal class Callout : FivePdApi.Callout
+    public class Callout : BaseCallout
     {
-
-        internal static Dictionary<Tickers.FriendlyName, Func<Task>> LoadedTickers = new Dictionary<Tickers.FriendlyName, Func<Task>>();
 
         private readonly List<VehicleHash> VehiclesToChooseFrom = new List<VehicleHash>() {
             VehicleHash.Blista, VehicleHash.Brioso, VehicleHash.Dilettante, VehicleHash.Dilettante2, VehicleHash.Issi2, VehicleHash.Panto, VehicleHash.Prairie, VehicleHash.Rhapsody,
@@ -28,7 +26,7 @@ namespace Amethyst.FivePD.AttributeCalloutPack.AbandonedVehicleCallout
         internal Models.ChosenVehicle SpawnedVehicle { get; set; }
         internal Models.SearchArea SearchArea { get; set; }
 
-        internal Callout()
+        public Callout()
         {
             SpawnPoint = World.GetNextPositionOnStreet(Game.PlayerPed.GetPositionOffset(new Vector3((float)SharedUtils.Rng.Next(100, 300), (float)SharedUtils.Rng.Next(100, 300), 0.0f)));
             ChosenScenario = Extensions.EnumExtensions.GetRandomEnumValue<Models.Scenario>();
@@ -43,32 +41,6 @@ namespace Amethyst.FivePD.AttributeCalloutPack.AbandonedVehicleCallout
             this.StartDistance = 75f;
         }
 
-        internal static void LoadTicker(
-            Callout callout,
-            Tickers.FriendlyName friendlyName,
-            Func<Callout, Task> ticker
-        )
-        {
-            if (!LoadedTickers.ContainsKey(friendlyName))
-            {
-                Task addedTicker() => ticker(callout);
-                callout.Tick += addedTicker;
-                LoadedTickers.Add(friendlyName, addedTicker);
-            }
-        }
-
-        internal static void UnloadTicker(
-            Callout callout,
-            Tickers.FriendlyName friendlyName
-        )
-        {
-            if (LoadedTickers.TryGetValue(friendlyName, out var ticker))
-            {
-                callout.Tick -= ticker;
-                LoadedTickers.Remove(friendlyName);
-            }
-        }
-
         public override async Task OnAccept()
         {
             InitBlip();
@@ -79,8 +51,8 @@ namespace Amethyst.FivePD.AttributeCalloutPack.AbandonedVehicleCallout
             SpawnedVehicle = new Models.ChosenVehicle(vehicle);
 
             CalloutDescription += $"You are looking for a {SpawnedVehicle.Colour} {SpawnedVehicle.Make} {SpawnedVehicle.Model} with the plate {SpawnedVehicle.Plate}";
-            SharedUtils.ShowNetworkedNotification($"You are looking for a ~o~{SpawnedVehicle.Colour} ~y~{SpawnedVehicle.Make} {SpawnedVehicle.Model}~s~. The plate is ~r~{SpawnedVehicle.Plate}~s~.");
-            SharedUtils.ShowNetworkedNotification(ChosenScenario.GetScenarioMessage());
+            SharedUtils.SendCalloutUpdateNotification($"You are looking for a ~o~{SpawnedVehicle.Colour} ~y~{SpawnedVehicle.Make} {SpawnedVehicle.Model}~s~. The plate is ~r~{SpawnedVehicle.Plate}~s~.", true);
+            SharedUtils.SendCalloutUpdateNotification(ChosenScenario.GetScenarioMessage(), true);
 
             ChosenScenario.SetupScenario(SpawnedVehicle.Vehicle.Handle);
 
@@ -93,10 +65,10 @@ namespace Amethyst.FivePD.AttributeCalloutPack.AbandonedVehicleCallout
 
             SearchArea = new Models.SearchArea(SpawnPoint, 145f);
 
-            LoadTicker(this, Tickers.FriendlyName.DrawVehicleInfo, Tickers.DrawVehicleInfoTick);
-            LoadTicker(this, Tickers.FriendlyName.UpdateSearchArea, Tickers.UpdateSearchAreaTick);
-            LoadTicker(this, Tickers.FriendlyName.FoundVehicleCheck, Tickers.FoundVehicleCheckTick);
-            LoadTicker(this, Tickers.FriendlyName.VehicleDestroyedCheck, Tickers.VehicleDestroyedCheckTick);
+            LoadTicker(this, TickerFriendlyName.DrawVehicleInfo, Tickers.DrawVehicleInfoTick);
+            LoadTicker(this, TickerFriendlyName.UpdateSearchArea, Tickers.UpdateSearchAreaTick);
+            LoadTicker(this, TickerFriendlyName.FoundVehicleCheck, Tickers.FoundVehicleCheckTick);
+            LoadTicker(this, TickerFriendlyName.VehicleDestroyedCheck, Tickers.VehicleDestroyedCheckTick);
         }
 
         public override async void OnCancelBefore()
@@ -104,7 +76,7 @@ namespace Amethyst.FivePD.AttributeCalloutPack.AbandonedVehicleCallout
             base.OnCancelBefore();
 
             // Unloads all remaining tickers
-            foreach (KeyValuePair<Tickers.FriendlyName, Func<Task>> loadedTicker in LoadedTickers)
+            foreach (KeyValuePair<TickerFriendlyName, Func<Task>> loadedTicker in LoadedTickers)
             {
                 UnloadTicker(this, loadedTicker.Key);
             }
