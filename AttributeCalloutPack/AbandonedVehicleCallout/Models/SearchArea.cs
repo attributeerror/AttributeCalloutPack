@@ -10,7 +10,7 @@ namespace Amethyst.FivePD.AttributeCalloutPack.AbandonedVehicleCallout.Models
         private readonly Vector3 _coords;
         private readonly float _radius;
 
-        internal Blip Blip { get; private set; }
+        internal Blip Blip { get; set; }
         internal bool ShouldRouteShow
         {
             get
