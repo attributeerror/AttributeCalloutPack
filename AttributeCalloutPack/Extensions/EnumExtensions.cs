@@ -10,7 +10,7 @@ namespace Amethyst.FivePD.AttributeCalloutPack.AbandonedVehicleCallout.Extension
         internal static T GetRandomEnumValue<T>() where T : Enum
         {
             Array values = Enum.GetValues(typeof(T));
-            return (T)values.GetValue(SharedUtils.Rng.Next(values.Length));
+            return (T)values.GetValue(SharedUtils.RandomProvider.GetThreadRandom().Next(values.Length));
         }
 
         internal static string GetEnumDescription<T>(

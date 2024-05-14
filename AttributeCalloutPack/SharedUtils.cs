@@ -3,15 +3,63 @@ using NativeApi = CitizenFX.Core.Native.API;
 using System;
 using Amethyst.FivePD.AttributeCalloutPack.Models;
 using FivePD.API;
-using System.Runtime.CompilerServices;
 using FivePD.API.Utils;
+using Amethyst.FivePD.AttributeCalloutPack.Extensions;
+using System.Collections.Generic;
+using System.Threading;
+using System.Runtime.CompilerServices;
 
 namespace Amethyst.FivePD.AttributeCalloutPack
 {
     internal class SharedUtils
     {
 
-        internal static readonly Random Rng = new Random(DateTime.UtcNow.Millisecond);
+        private const string _logHeader = "^3================= ^*^6AttributeCalloutPack ^3=================^r";
+
+        internal static void LogCalloutDebug(
+            string message,
+            [CallerMemberName] string callerMember = "",
+            [CallerLineNumber] int callerLineNumber = 0
+        )
+        {
+            string debugLog = $"{_logHeader}\n";
+            if (!string.IsNullOrEmpty(callerMember))
+            {
+                debugLog += $"[{callerMember}:{callerLineNumber}] ";
+            }
+            debugLog += $"{message}\n{_logHeader}";
+
+            Debug.WriteLine(debugLog);
+        }
+
+        internal static void LogCalloutError(
+            Exception ex,
+            [CallerMemberName] string callerMember = "",
+            [CallerLineNumber] int callerLineNumber = 0
+        )
+        {
+            List<string> exceptionMessages = ex.GetInnerExceptionMessages();
+
+            string debugLog = $"{_logHeader}\n";
+            if (string.IsNullOrEmpty(callerMember))
+            {
+                debugLog += $"{_logHeader}\n^8An error has occurred!^r";
+            }
+            else
+            {
+                debugLog += $"{_logHeader}\n^8An error has occurred at {callerMember}:{callerLineNumber}!^r";
+            }
+
+            for (int i = 1; i <=  exceptionMessages.Count; i++)
+            {
+                string message = exceptionMessages[i];
+                debugLog += $"\n^5Exception #{i}^r: {message}";
+            }
+
+            debugLog += $"\n{_logHeader}";
+
+            Debug.WriteLine(debugLog);
+        }
 
         internal static Vector3 GetNearestPositionOnRoadFromEntity(
             int entityHandle
@@ -34,7 +82,7 @@ namespace Amethyst.FivePD.AttributeCalloutPack
             Action onFailure = null
         )
         {
-            if (Rng.Next(100) < chance)
+            if (RandomProvider.GetThreadRandom().Next(100) < chance)
             {
                 onSuccess?.Invoke();
             }
@@ -117,6 +165,19 @@ namespace Amethyst.FivePD.AttributeCalloutPack
             PlayerData playerData = Utilities.GetPlayerData();
             string callsign = $"{playerData.DisplayName} {playerData.Callsign}";
             return callsign.Length < 1 ? "You" : callsign;
+        }
+
+        internal static class RandomProvider
+        {
+            private static int seed = Environment.TickCount;
+
+            private readonly static ThreadLocal<Random> ThreadRandom = new ThreadLocal<Random>
+                (() => new Random(Interlocked.Increment(ref seed)));
+
+            internal static Random GetThreadRandom()
+            {
+                return ThreadRandom.Value;
+            }
         }
 
     }

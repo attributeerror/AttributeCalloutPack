@@ -6,11 +6,13 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using NativeApi = CitizenFX.Core.Native.API;
+using FivePdApi = FivePD.API;
+using System.Linq;
 
 namespace Amethyst.FivePD.AttributeCalloutPack.AbandonedVehicleCallout
 {
     [CalloutProperties("Abandoned Vehicle", "AttributeError", "1.2.0")]
-    public class Callout : BaseCallout
+    public partial class AbandonedVehicleCallout : FivePdApi.Callout
     {
 
         private readonly List<VehicleHash> VehiclesToChooseFrom = new List<VehicleHash>() {
@@ -26,26 +28,72 @@ namespace Amethyst.FivePD.AttributeCalloutPack.AbandonedVehicleCallout
         internal Models.ChosenVehicle SpawnedVehicle { get; set; }
         internal Models.SearchArea SearchArea { get; set; }
 
-        public Callout()
+        public AbandonedVehicleCallout()
         {
-            SpawnPoint = World.GetNextPositionOnStreet(Game.PlayerPed.GetPositionOffset(new Vector3((float)SharedUtils.Rng.Next(100, 300), (float)SharedUtils.Rng.Next(100, 300), 0.0f)));
-            ChosenScenario = Extensions.EnumExtensions.GetRandomEnumValue<Models.Scenario>();
-            ChosenVehicleHash = VehiclesToChooseFrom[SharedUtils.Rng.Next(VehiclesToChooseFrom.Count)];
+            try
+            {
+                SpawnPoint = World.GetNextPositionOnStreet(
+                    Game.PlayerPed.GetPositionOffset(
+                        new Vector3(
+                            (float)SharedUtils.RandomProvider.GetThreadRandom().Next(100, 300),
+                            (float)SharedUtils.RandomProvider.GetThreadRandom().Next(100, 300),
+                            0.0f
+                        )
+                    )
+                );
+                ChosenScenario = Extensions.EnumExtensions.GetRandomEnumValue<Models.Scenario>();
+                ChosenVehicleHash = VehiclesToChooseFrom[SharedUtils.RandomProvider.GetThreadRandom().Next(VehiclesToChooseFrom.Count)];
 
-            this.InitInfo(SpawnPoint);
+                this.InitInfo(SpawnPoint);
 
-            this.ShortName = "Abandoned Vehicle";
-            this.CalloutDescription = $"A caller has reported a suspicious abandoned vehicle, respond to investigate. {ChosenScenario.GetScenarioMessage()}";
-            this.ResponseCode = 2;
+                this.ShortName = "Abandoned Vehicle";
+                this.CalloutDescription = $"A caller has reported a suspicious abandoned vehicle, respond to investigate. {ChosenScenario.GetScenarioMessage()}";
+                this.ResponseCode = 2;
 
-            this.StartDistance = 75f;
+                this.StartDistance = 75f;
+            }
+            catch (Exception ex)
+            {
+                SharedUtils.LogCalloutError(ex);
+                EndCallout();
+            }
         }
 
         public override async Task OnAccept()
         {
-            InitBlip();
-            Marker?.Delete();
+            try
+            {
+                await base.OnAccept();
 
+                InitBlip();
+                Marker?.Delete();
+                UpdateData();
+            }
+            catch (Exception ex)
+            {
+                SharedUtils.LogCalloutError(ex);
+                EndCallout();
+            }
+        }
+
+        public override void OnStart(
+            Ped closest
+        )
+        {
+            try
+            {
+                base.OnStart(AssignedPlayers.FirstOrDefault());
+                OnStartAsync().Wait();
+            }
+            catch (Exception ex)
+            {
+                SharedUtils.LogCalloutError(ex);
+                EndCallout();
+            }
+        }
+
+        private async Task OnStartAsync()
+        {
             Vehicle vehicle = await SpawnVehicle(ChosenVehicleHash, SpawnPoint);
             vehicle.IsPersistent = true;
             SpawnedVehicle = new Models.ChosenVehicle(vehicle);
@@ -57,7 +105,7 @@ namespace Amethyst.FivePD.AttributeCalloutPack.AbandonedVehicleCallout
             ChosenScenario.SetupScenario(SpawnedVehicle.Vehicle.Handle);
 
             Vector3 nearestRoadPosition = SharedUtils.GetNearestPositionOnRoadFromEntity(SpawnedVehicle.Vehicle.Handle);
-            float heading = SharedUtils.Rng.Next(0, 361);
+            float heading = SharedUtils.RandomProvider.GetThreadRandom().Next(0, 361);
             SpawnedVehicle.Vehicle.Position = nearestRoadPosition;
             NativeApi.SetEntityCoords(SpawnedVehicle.Vehicle.Handle, nearestRoadPosition.X, nearestRoadPosition.Y, nearestRoadPosition.Z, false, false, false, true);
             NativeApi.SetEntityHeading(SpawnedVehicle.Vehicle.Handle, heading);
@@ -65,32 +113,60 @@ namespace Amethyst.FivePD.AttributeCalloutPack.AbandonedVehicleCallout
 
             SearchArea = new Models.SearchArea(SpawnPoint, 145f);
 
-            LoadTicker(this, TickerFriendlyName.DrawVehicleInfo, Tickers.DrawVehicleInfoTick);
-            LoadTicker(this, TickerFriendlyName.UpdateSearchArea, Tickers.UpdateSearchAreaTick);
-            LoadTicker(this, TickerFriendlyName.FoundVehicleCheck, Tickers.FoundVehicleCheckTick);
-            LoadTicker(this, TickerFriendlyName.VehicleDestroyedCheck, Tickers.VehicleDestroyedCheckTick);
+            Tick += CalloutUtils.LoadTicker(this.CaseID, TickerFriendlyName.AVCDrawVehicleInfo, DrawVehicleInfoTick);
+            Tick += CalloutUtils.LoadTicker(this.CaseID, TickerFriendlyName.AVCUpdateSearchArea, UpdateSearchAreaTick);
+            Tick += CalloutUtils.LoadTicker(this.CaseID, TickerFriendlyName.AVCFoundVehicleCheck, FoundVehicleCheckTick);
+            Tick += CalloutUtils.LoadTicker(this.CaseID, TickerFriendlyName.AVCVehicleDestroyedCheck, VehicleDestroyedCheckTick);
         }
 
-        public override async void OnCancelBefore()
+        public override void OnCancelBefore()
         {
+            SharedUtils.LogCalloutDebug($"OnCancelBefore called");
             base.OnCancelBefore();
 
-            // Unloads all remaining tickers
-            foreach (KeyValuePair<TickerFriendlyName, Func<Task>> loadedTicker in LoadedTickers)
+            try
             {
-                UnloadTicker(this, loadedTicker.Key);
+                SharedUtils.LogCalloutDebug($"Unloading all tickers...");
+                if (CalloutUtils.LoadedTickers.TryGetValue(this.CaseID, out LoadedTickers tickers))
+                {
+                    foreach (KeyValuePair<TickerFriendlyName, Func<Task>> loadedTicker in tickers)
+                    {
+                        Tick -= CalloutUtils.UnloadTicker(this.CaseID, loadedTicker.Key);
+                    }
+                    CalloutUtils.CleanupCallout(this.CaseID);
+                }
             }
-            
-            // Delete search area blip if it still exists
-            if (SearchArea != null && SearchArea.Blip.Exists())
+            catch (Exception ex)
             {
-                SearchArea.Blip.Delete();
+                SharedUtils.LogCalloutError(ex);
+            }
+
+            try
+            {
+                SharedUtils.LogCalloutDebug($"Checking if search area blip exists...");
+                // Delete search area blip if it still exists
+                if (SearchArea != null && SearchArea.Blip.Exists())
+                {
+                    SearchArea.Blip.Delete();
+                    SharedUtils.LogCalloutDebug($"Search area blip exists, now deleted.");
+                }
+            }
+            catch (Exception ex)
+            {
+                SharedUtils.LogCalloutError(ex);
             }
 
             // Make vehicle non-persistent so that FiveM can clear it up.
-            SpawnedVehicle.Vehicle.IsPersistent = false;
-
-            await Task.Yield();
+            try
+            {
+                SharedUtils.LogCalloutDebug($"Marking SpawnedVehicle as not persistent.");
+                SpawnedVehicle.Vehicle.IsPersistent = false;
+                SharedUtils.LogCalloutDebug($"SpawnedVehicle no longer persistent.");
+            }
+            catch (Exception ex)
+            {
+                SharedUtils.LogCalloutError(ex);
+            }
         }
 
         public async override Task<bool> CheckRequirements()

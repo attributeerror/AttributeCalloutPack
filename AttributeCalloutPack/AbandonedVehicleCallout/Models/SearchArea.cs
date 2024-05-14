@@ -7,7 +7,7 @@ namespace Amethyst.FivePD.AttributeCalloutPack.AbandonedVehicleCallout.Models
     internal class SearchArea
     {
 
-        private readonly Vector3 _coords;
+        private Vector3 _coords;
         private readonly float _radius;
 
         internal Blip Blip { get; set; }
