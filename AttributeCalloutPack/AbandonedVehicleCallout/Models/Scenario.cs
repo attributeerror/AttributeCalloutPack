@@ -49,7 +49,7 @@ namespace Amethyst.FivePD.AttributeCalloutPack.AbandonedVehicleCallout.Models
                 NativeApi.SetVehicleEngineHealth(spawnedVehicleHandle, 3f); // make vehicle smoke
                 NativeApi.SetVehicleDoorOpen(spawnedVehicleHandle, (int)VehicleDoorIndex.FrontRightDoor, false, false);
 
-                int doorProbability = SharedUtils.Rng.Next(10);
+                int doorProbability = SharedUtils.RandomProvider.GetThreadRandom().Next(10);
                 if (doorProbability % 2 == 0)
                 {
                     int vehicleDoor;
@@ -81,10 +81,10 @@ namespace Amethyst.FivePD.AttributeCalloutPack.AbandonedVehicleCallout.Models
             }
             else if (@this == Scenario.TiresSlashed)
             {
-                int tiresToSlash = SharedUtils.Rng.Next(8);
+                int tiresToSlash = SharedUtils.RandomProvider.GetThreadRandom().Next(8);
                 for (int i = 0; i < tiresToSlash; i++)
                 {
-                    NativeApi.SetVehicleTyreBurst(spawnedVehicleHandle, i, SharedUtils.Rng.Next(100) % 3 == 0, SharedUtils.Rng.Next(500, 1000));
+                    NativeApi.SetVehicleTyreBurst(spawnedVehicleHandle, i, SharedUtils.RandomProvider.GetThreadRandom().Next(100) % 3 == 0, SharedUtils.RandomProvider.GetThreadRandom().Next(500, 1000));
                 }
             }
         }
